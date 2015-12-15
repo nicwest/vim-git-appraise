@@ -5,7 +5,7 @@ let s:gitappraise = s:scope.funcs('autoload/gitappraise.vim')
 call themis#helper('command').with(s:)
 
 function! s:suite.before()
-  let g:git_appraise_binary = exepath('git-appraise')
+  let g:git_appraise_binary = 'git-appraise'
 endfunction
 
 function! s:suite.swap_cwd()

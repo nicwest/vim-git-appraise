@@ -1,4 +1,4 @@
-language: go
+language: viml
 go: 1.5
 
 branches:
@@ -8,9 +8,16 @@ branches:
     - /^feat(ure)?-.*$/
     - /^(hot)?fix-.*$/
 
+addons:
+  apt:
+    packages:
+      - vim
+
+before_install:
+  - export GOPATH=/home/travis/gopath
+  - export PATH=$GOPATH/bin:$PATH
+
 install:
-  - sudo apt-get update -q
-  - sudo apt-get install -y vim-gtk
   - go get github.com/google/git-appraise/git-appraise 
 
 before_script:
