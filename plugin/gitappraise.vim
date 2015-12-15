@@ -15,7 +15,7 @@ if !exists('g:git_appraise_bin')
   if executable('git-appraise')
     let g:git_appraise_bin = exepath('git-appraise')
   else
-    let g:git_appraise_bin = 0
+    let g:git_appraise_bin = ""
   endif
 
 endif
