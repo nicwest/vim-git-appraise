@@ -35,6 +35,7 @@ endfunction
 
 function! s:suite.after()
   call system("rm -rf /tmp/vim-git-appraise-test.*")
+  execute "cd" s:original_cwd
 endfunction
 
 function! s:suite.get_list()
