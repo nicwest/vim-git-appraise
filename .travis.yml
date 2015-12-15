@@ -1,5 +1,4 @@
-language: viml
-
+language: go
 go: 1.5
 
 branches:
