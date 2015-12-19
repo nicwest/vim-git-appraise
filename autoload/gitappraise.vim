@@ -56,8 +56,6 @@ endfunction
 function! s:GetList() abort
   let l:cmd = g:git_appraise_binary . " list"
   let l:output = system(l:cmd)
-  call themis#log(l:output)
-  call themis#log(getcwd())
   let l:list_raw = split(l:output, '\s*\n\s*')
   let l:list = []
   let l:current = []
