@@ -11,11 +11,11 @@ set cpo&vim
 "let g:loaded_git_appraise = 1
 
 " Options: {{{1
-if !exists('g:git_appraise_bin')
+if !exists('g:git_appraise_binary')
   if executable('git-appraise')
-    let g:git_appraise_bin = 'git-appraise'
+    let g:git_appraise_binary = 'git-appraise'
   else
-    let g:git_appraise_bin = ""
+    let g:git_appraise_binary = ""
   endif
 
 endif

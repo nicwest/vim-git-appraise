@@ -17,26 +17,53 @@ function! s:CheckBinary() abort
   endif
 endfunction
 
-function! s:SummaryBinds() abort
+function! s:ListSyntax() abort
+  syntax clear
+  syn keyword GitAppraisePending pending contained
+  syn keyword GitAppraiseAccepted accepted contained
+  syn keyword GitAppraiseRejected rejected contained
 
+  syn match GitAppraiseHash / [a-z0-9]\+ / contained
+
+  syn match GitAppraiseSummaryStatus /^\[[a-z]\+\]/ contained contains=GitAppraisePending,GitAppraiseAccepted,GitAppraiseRejected
+  syn match GitAppraiseSummaryDetails /^\[[a-z]\+\] [a-z0-9]\+ / contained contains=GitAppraiseSummaryStatus,GitAppraiseHash
+  syn match GitAppraiseSummaryLine '^\[[a-z]\+\] [a-z0-9]\+ .*$' contains=GitAppraiseSummaryDetails
+
+  hi GitAppraiseSummaryStatus term=bold cterm=bold gui=bold 
+  hi GitAppraisePending term=bold cterm=bold gui=bold ctermfg=11 guifg=#f0c674
+  hi GitAppraiseAccepted term=bold cterm=bold gui=bold ctermfg=193 guifg=#d7ffaf
+  hi GitAppraiseRejected term=bold cterm=bold gui=bold ctermfg=9 guifg=#cc6666
+  hi GitAppraiseHash ctermfg=13 guifg=#b294bb
 endfunction
 
-function! s:SummaryBuffer(list) abort
+function! s:ListShowRequest() abort
+  let l:line = getline('.')
+  let l:hash = matchlist(l:line, '^\s*\[.*\] \([a-z0-9]*\)')[1]
+  call gitappraise#show(l:hash)
+endfunction
+
+function! s:ListBinds() abort
+  nnoremap <buffer> <silent> <space> :call <SID>ListShowRequest()<CR>
+  nnoremap <buffer> <silent> <CR> :call <SID>ListShowRequest()<CR>
+endfunction
+
+function! s:ListBuffer(list) abort
   if !bufexists('git-appraise')
     badd git-appraise 
-    call setbufvar('git-appraise', '&bufhidden', 'hide')
-    call setbufvar('git-appraise', '&buflisted', 0)
-    call setbufvar('git-appraise', '&buflisted', 0)
-    call setbufvar('git-appraise', '&buftype', 'nofile')
   endif
-  buffer git-appraise
-  call setbufvar('git-appraise', '&readonly', 0)
+  let l:summary_buffer = bufnr('git-appraise')
+  call setbufvar(l:summary_buffer, '&bufhidden', 'hide')
+  call setbufvar(l:summary_buffer, '&buflisted', 0)
+  call setbufvar(l:summary_buffer, '&buftype', 'nofile')
+  call setbufvar(l:summary_buffer, '&ft', 'gitappraise')
+  execute 'silent keepa keepjump buffer' l:summary_buffer
+  call setbufvar(l:summary_buffer, '&readonly', 0)
   norm! gg"_dG
   for l:item in a:list
     call append('$', '[' . l:item[0] . '] ' . l:item[1] . ' ' . l:item[2])
   endfor
   norm! gg"_dd
-  call setbufvar('git-appraise', '&readonly', 1)
+  call setbufvar(l:summary_buffer, '&readonly', 1)
 endfunction
 
 function! s:SwapCwd() abort
@@ -75,8 +102,17 @@ function! s:GetList() abort
 endfunction
 
 " Library Interface: {{{1
-function! gitappraise#some_function() abort
-  echo "Hello world!"
+function! gitappraise#show(hash) abort
+  echo a:hash
+endfunction
+
+function! gitappraise#list() abort
+  call s:SwapCwd()
+  let l:list = s:GetList()
+  call s:ListBuffer(l:list)
+  call s:ListBinds()
+  call s:ListSyntax()
+  call s:UnSwapCwd()
 endfunction
 
 " Teardown:{{{1
