@@ -2,10 +2,15 @@
 let s:save_cpo = &cpo
 set cpo&vim
 
+" Vital!
+let s:V = vital#of('gitappraise')
+let s:JSON = s:V.import('Web.JSON')
+
 let s:BinaryOk = 0
 let s:pwd = ""
 
 " Private Functions: {{{1
+" Utils: {{{2
 function! s:CheckBinary() abort
   if executable(g:git_appraise_binary)
     return 1
@@ -17,17 +22,28 @@ function! s:CheckBinary() abort
   endif
 endfunction
 
+function! s:SwapCwd() abort
+  let s:pwd = getcwd()
+  cd %:p:h
+endfunction
+
+function! s:UnSwapCwd() abort
+  execute "cd" s:pwd
+  let s:pwd = ""
+endfunction
+
+" List: {{{2
 function! s:ListSyntax() abort
   syntax clear
   syn keyword GitAppraisePending pending contained
   syn keyword GitAppraiseAccepted accepted contained
   syn keyword GitAppraiseRejected rejected contained
 
-  syn match GitAppraiseHash / [a-z0-9]\+ / contained
+  syn match GitAppraiseHash /\s\+[a-z0-9]\+ / contained
 
   syn match GitAppraiseSummaryStatus /^\[[a-z]\+\]/ contained contains=GitAppraisePending,GitAppraiseAccepted,GitAppraiseRejected
-  syn match GitAppraiseSummaryDetails /^\[[a-z]\+\] [a-z0-9]\+ / contained contains=GitAppraiseSummaryStatus,GitAppraiseHash
-  syn match GitAppraiseSummaryLine '^\[[a-z]\+\] [a-z0-9]\+ .*$' contains=GitAppraiseSummaryDetails
+  syn match GitAppraiseSummaryDetails /^\[[a-z]\+\]\s\+[a-z0-9]\+ / contained contains=GitAppraiseSummaryStatus,GitAppraiseHash
+  syn match GitAppraiseSummaryLine '^\[[a-z]\+\]\s\+[a-z0-9]\+ .*$' contains=GitAppraiseSummaryDetails
 
   hi GitAppraiseSummaryStatus term=bold cterm=bold gui=bold 
   hi GitAppraisePending term=bold cterm=bold gui=bold ctermfg=11 guifg=#f0c674
@@ -36,15 +52,17 @@ function! s:ListSyntax() abort
   hi GitAppraiseHash ctermfg=13 guifg=#b294bb
 endfunction
 
-function! s:ListShowRequest() abort
+function! s:ListRequestHash() abort
   let l:line = getline('.')
-  let l:hash = matchlist(l:line, '^\s*\[.*\] \([a-z0-9]*\)')[1]
-  call gitappraise#show(l:hash)
+  let l:hash = matchlist(l:line, '^\s*\[.*\]\s\+\([a-z0-9]*\)')[1]
+  return l:hash
 endfunction
 
 function! s:ListBinds() abort
-  nnoremap <buffer> <silent> <space> :call <SID>ListShowRequest()<CR>
-  nnoremap <buffer> <silent> <CR> :call <SID>ListShowRequest()<CR>
+  nnoremap <buffer> <silent> <space> :call gitappraise#show(<SID>ListRequestHash())<CR>
+  nnoremap <buffer> <silent> <CR> :call gitappraise#show(<SID>ListRequestHash())<CR>
+  nnoremap <buffer> <silent> q :call bw!<CR>
+  nnoremap <buffer> <silent> <ESC> :call bw!<CR>
 endfunction
 
 function! s:ListBuffer(list) abort
@@ -60,21 +78,12 @@ function! s:ListBuffer(list) abort
   call setbufvar(l:summary_buffer, '&readonly', 0)
   norm! gg"_dG
   for l:item in a:list
-    call append('$', '[' . l:item[0] . '] ' . l:item[1] . ' ' . l:item[2])
+    call append('$', '[' . l:item[0] . "]\t" . l:item[1] . ' ' . l:item[2])
   endfor
   norm! gg"_dd
   call setbufvar(l:summary_buffer, '&readonly', 1)
 endfunction
 
-function! s:SwapCwd() abort
-  let s:pwd = getcwd()
-  cd %:p:h
-endfunction
-
-function! s:UnSwapCwd() abort
-  execute "cd" s:pwd
-  let s:pwd = ""
-endfunction
 
 function! s:SortList(i1, i2) abort
   return a:i1[0] == a:i2[0] ? 0 : a:i1[0] > a:i2[0] ? 1 : -1
@@ -100,6 +109,26 @@ function! s:GetList() abort
 
   return sort(l:list, "s:SortList")
 endfunction
+" Show: {{{2
+
+function! s:Show(hash) abort
+  let l:cmd = g:git_appraise_binary . " show -json " . a:hash
+  let l:output = system(l:cmd)
+  let l:show = s:JSON.decode(l:output)
+  return l:show
+endfunction
+
+function! s:ShowDiff(hash) abort
+  let l:cmd = g:git_appraise_binary . " show -diff " . a:hash
+  let l:output = system(l:cmd)
+  return l:output
+endfunction
+
+" Comment: {{{2
+" Accept: {{{2
+" Reject: {{{2
+" Push: {{{2
+" Pull: {{{2
 
 " Library Interface: {{{1
 function! gitappraise#show(hash) abort

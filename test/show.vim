@@ -1,4 +1,4 @@
-let s:suite = themis#suite('utils')
+let s:suite = themis#suite('show')
 let s:assert = themis#helper('assert')
 let s:scope = themis#helper('scope')
 let s:gitappraise = s:scope.funcs('autoload/gitappraise.vim')
@@ -30,7 +30,6 @@ function! s:suite.before()
   call system("git commit -m 'fixing all dem bugs'")
   call system(g:git_appraise_binary . " request")
   call system(g:git_appraise_binary . " accept")
-  call system("git checkout master")
   execute "cd" s:original_cwd
   let s:test_git_path = l:path
 endfunction
@@ -48,11 +47,23 @@ function! s:suite.before_each()
   endfor
 endfunction
 
-function! s:suite.swap_cwd()
-  execute printf('edit! %s/test.txt', s:test_git_path)
-  let l:pwd = getcwd()
-  call s:gitappraise.SwapCwd()
-  call s:assert.equals(getcwd(), expand("%:p:h"))
-  call s:gitappraise.UnSwapCwd()
-  call s:assert.equals(getcwd(), l:pwd)
+function! s:suite.show_returns_object_with_the_correct_elements()
+  execute 'cd' s:test_git_path
+  let l:list = system('git appraise list')
+  let l:hash = matchlist(l:list, '\s*.*\] \([a-z0-9]\+\)\n\s*fixing all dem bugs')[1]
+  let l:show = s:gitappraise.Show(l:hash)
+  call s:assert.key_exists(l:show, 'comments')
+  call s:assert.key_exists(l:show, 'resolved')
+  call s:assert.key_exists(l:show, 'submitted')
+  call s:assert.key_exists(l:show, 'request')
+  call s:assert.key_exists(l:show, 'revision')
+  call s:assert.equals(l:show.revision, l:hash)
+  call s:assert.equals(l:show.request.reviewRef, 'refs/heads/bug-fix')
+endfunction
+
+function! s:suite.show_diff_gets_request_diff()
+  execute 'cd' s:test_git_path
+  let l:list = system('git appraise list')
+  let l:hash = matchlist(l:list, '\s*.*\] \([a-z0-9]\+\)\n\s*fixing all dem bugs')[1]
+  let l:diff = s:gitappraise.ShowDiff(l:hash)
 endfunction
