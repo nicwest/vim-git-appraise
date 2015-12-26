@@ -41,7 +41,7 @@ endfunction
 
 function! s:suite.before_each()
   let l:current_buffers = filter(range(1, bufnr('$')), 'bufexists(v:val)')
-  let l:buffers_to_wipe = filter(l:current_buffers, 'index(s:original_buffers, v:val) > -1')
+  let l:buffers_to_wipe = filter(l:current_buffers, 'index(s:original_buffers, v:val) == -1')
   for l:buffer in l:buffers_to_wipe
     execute 'bw!' . l:buffer
   endfor
@@ -50,41 +50,41 @@ endfunction
 function! s:suite.list_buffer_creates_new_unlisted_buffer()
   let l:list = []
   call s:gitappraise.ListBuffer(l:list)
-  call s:assert.equals(bufexists('git-appraise'), 1)
-  call s:assert.equals(getbufvar('git-appraise', '&buflisted'), 0)
+  call s:assert.equals(bufexists('git-appraise://list'), 1)
+  call s:assert.equals(getbufvar('git-appraise://list', '&buflisted'), 0)
 endfunction
 
 function! s:suite.list_buffer_creates_new_hidden_buffer()
   let l:list = []
   call s:gitappraise.ListBuffer(l:list)
-  call s:assert.equals(bufexists('git-appraise'), 1)
-  call s:assert.equals(getbufvar('git-appraise', '&bufhidden'), 'hide')
+  call s:assert.equals(bufexists('git-appraise://list'), 1)
+  call s:assert.equals(getbufvar('git-appraise://list', '&bufhidden'), 'hide')
 endfunction
 
 function! s:suite.list_buffer_creates_new_nofile_buffer()
   let l:list = []
   call s:gitappraise.ListBuffer(l:list)
-  call s:assert.equals(bufexists('git-appraise'), 1)
-  call s:assert.equals(getbufvar('git-appraise', '&buftype'), 'nofile')
+  call s:assert.equals(bufexists('git-appraise://list'), 1)
+  call s:assert.equals(getbufvar('git-appraise://list', '&buftype'), 'nofile')
 endfunction
 
 function! s:suite.list_buffer_creates_new_readonly_buffer()
   let l:list = []
   call s:gitappraise.ListBuffer(l:list)
-  call s:assert.equals(bufexists('git-appraise'), 1)
-  call s:assert.equals(getbufvar('git-appraise', '&readonly'), 1)
+  call s:assert.equals(bufexists('git-appraise://list'), 1)
+  call s:assert.equals(getbufvar('git-appraise://list', '&readonly'), 1)
 endfunction
 
 function! s:suite.list_buffer_focuses_summary_buffer()
   let l:list = []
   call s:gitappraise.ListBuffer(l:list)
-  call s:assert.equals(expand('%'), 'git-appraise')
+  call s:assert.equals(expand('%'), 'git-appraise://list')
 endfunction
 
 function! s:suite.list_buffer_is_populated_with_list()
   let l:list = [['pending', 'abc123', 'Some new feature'], ['approved', 'def456', 'Fixing some bug']]
   call s:gitappraise.ListBuffer(l:list)
-  let l:lines = getbufline('git-appraise', 0, '$')
+  let l:lines = getbufline('git-appraise://list', 0, '$')
   call s:assert.equals(l:lines[0], '[pending]	abc123 Some new feature')
   call s:assert.equals(l:lines[1], '[approved]	def456 Fixing some bug')
 endfunction

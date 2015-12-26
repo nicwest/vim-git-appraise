@@ -24,11 +24,13 @@ endfunction
 
 function! s:SwapCwd() abort
   let s:pwd = getcwd()
-  cd %:p:h
+  if bufname('%') !~ 'git-appraise://'
+    lcd %:p:h
+  endif
 endfunction
 
 function! s:UnSwapCwd() abort
-  execute "cd" s:pwd
+  execute "lcd" s:pwd
   let s:pwd = ""
 endfunction
 
@@ -66,21 +68,21 @@ function! s:ListBinds() abort
 endfunction
 
 function! s:ListBuffer(list) abort
-  if !bufexists('git-appraise')
-    badd git-appraise 
+  if !bufexists('git-appraise://list')
+    badd git-appraise://list
   endif
-  let l:summary_buffer = bufnr('git-appraise')
+  let l:summary_buffer = bufnr('git-appraise://list')
   call setbufvar(l:summary_buffer, '&bufhidden', 'hide')
   call setbufvar(l:summary_buffer, '&buflisted', 0)
   call setbufvar(l:summary_buffer, '&buftype', 'nofile')
   call setbufvar(l:summary_buffer, '&ft', 'gitappraise')
   execute 'silent keepa keepjump buffer' l:summary_buffer
   call setbufvar(l:summary_buffer, '&readonly', 0)
-  norm! gg"_dG
+  silent norm! gg"_dG
   for l:item in a:list
     call append('$', '[' . l:item[0] . "]\t" . l:item[1] . ' ' . l:item[2])
   endfor
-  norm! gg"_dd
+  silent norm! gg"_dd
   call setbufvar(l:summary_buffer, '&readonly', 1)
 endfunction
 
@@ -114,6 +116,9 @@ endfunction
 function! s:Show(hash) abort
   let l:cmd = g:git_appraise_binary . " show -json " . a:hash
   let l:output = system(l:cmd)
+  if l:output =~ 'There is no matching review\..*'
+    return {}
+  endif
   let l:show = s:JSON.decode(l:output)
   return l:show
 endfunction
@@ -124,6 +129,26 @@ function! s:ShowDiff(hash) abort
   return l:output
 endfunction
 
+function! s:ShowBuffer(diff) abort
+  if !bufexists('git-appraise://show')
+    badd git-appraise://show
+  endif
+  let l:summary_buffer = bufnr('git-appraise://show')
+  call setbufvar(l:summary_buffer, '&bufhidden', 'hide')
+  call setbufvar(l:summary_buffer, '&buflisted', 0)
+  call setbufvar(l:summary_buffer, '&buftype', 'nofile')
+  call setbufvar(l:summary_buffer, '&ft', 'diff')
+  execute 'silent keepa keepjump buffer' l:summary_buffer
+  call setbufvar(l:summary_buffer, '&readonly', 0)
+  silent norm! gg"_dG
+  let l:reg_contents = @b
+  let @d = a:diff
+  put d
+  let @d = l:reg_contents
+  silent norm! gg"_dd
+  call setbufvar(l:summary_buffer, '&readonly', 1)
+endfunction
+
 " Comment: {{{2
 " Accept: {{{2
 " Reject: {{{2
@@ -132,7 +157,11 @@ endfunction
 
 " Library Interface: {{{1
 function! gitappraise#show(hash) abort
-  echo a:hash
+  call s:SwapCwd()
+  let l:request = s:Show(a:hash)
+  let l:diff = s:ShowDiff(a:hash)
+  call s:ShowBuffer(l:diff)
+  call s:UnSwapCwd()
 endfunction
 
 function! gitappraise#list() abort
