@@ -257,3 +257,11 @@ function! s:suite.get_line_in_diff_returns_correctly_for_deleted_file()
   call s:assert.equals(l:line_in_file.files.a.filename, 'test/buffers.vim')
   call s:assert.equals(l:line_in_file.files.b.filename, 'test/buffers.vim')
 endfunction
+
+function! s:suite.find_line_in_diff_locates_correct_line()
+  new sample_diff
+  call append(0, split(s:sample_diff, "\n"))
+  norm! G"_dd
+  let l:line_in_diff = s:gitappraise.FindDiffLineForFile('autoload/foobar.txt', 6, 'b')
+  call s:assert.equals(l:line_in_diff, 16)
+endfunction

@@ -34,7 +34,7 @@ function! s:GetLineInDiff() abort
     let l:line = getline(l:current_line)
 
     if !l:result.got_files && l:line !~ '^diff --git.*'
-      let l:current_line -= 1
+      let l:current_line = search('^diff --git.*', 'Wnbc', 0)
       continue
     endif
 
@@ -83,7 +83,7 @@ function! s:GetLineInDiff() abort
     endif
 
     if l:result.got_files && !l:result.got_line && l:line !~ '^@@.*'
-      let l:current_line -= 1
+      let l:current_line = search('^@@.*', 'bnWc', l:current_line)
       continue
     endif
 
@@ -95,6 +95,7 @@ function! s:GetLineInDiff() abort
         let l:result.files[l:key].lineno = eval(l:starting_line_no[1])
       endfor
       let l:result.got_line = 1
+      let l:result.start_line = l:current_line
     endif
 
     if l:result.got_files && l:result.got_line 
@@ -120,6 +121,58 @@ function! s:GetLineInDiff() abort
   endwhile
   return l:result
 endfunction
+
+function! s:FindDiffLineForFile(filename, lineno, whatfile) abort
+  let l:current_cursor = getpos('.')
+  norm! gg^
+  call search('diff --git .*/' . a:filename . ' .*', 'cW', 'cW')
+  let l:result = s:GetLineInDiff()
+  let l:current_line = l:result.start_line
+  let l:done = 0
+  let l:line_in_diff = 0
+  let l:file_lines = {}
+  for l:key in keys(l:result.files)
+    let l:f = l:result.files[l:key]
+    let l:file_lines[l:f.sign] = l:f.lineno
+  endfor
+  let l:file_sign = l:result.files[a:whatfile].sign
+  while !l:done
+    let l:line = getline(l:current_line)
+
+    if l:line =~ '^@@.*'
+      for l:key in keys(l:result.files)
+        let l:r = l:result.files[l:key]
+        let l:starting_line_no = matchlist(l:line, ' ' . l:r.sign . '\([0-9]\+\)')
+        let l:file_lines[l:r.sign] = eval(l:starting_line_no[1])
+        let l:result.files[l:key].lineno = eval(l:starting_line_no[1])
+      endfor
+      let l:result.got_line = 1
+      let l:result.start_line = l:current_line
+      let l:current_line += 1
+      continue
+    endif
+
+    if l:line !~ '^@@.*'
+      let l:current_line += 1
+      let l:line = getline(l:current_line)
+      let l:sign = l:line[0]
+      if l:sign == ' '
+        for l:key in keys(l:file_lines)
+          let l:file_lines[l:key] +=1
+        endfor
+      else
+        let l:file_lines[l:sign] +=1
+      endif
+    endif
+
+    if l:file_lines[l:file_sign] == a:lineno
+      let l:line_in_diff = l:current_line
+      let l:done = 1
+    endif
+  endwhile
+  call setpos('.', l:current_cursor)
+  return l:line_in_diff
+endfunc
 
 function! s:SwapCwd() abort
   let s:pwd = getcwd()
